@@ -1,6 +1,5 @@
 use crate::db_type::DbType;
 use crate::metadata::MetaData;
-use crate::query_result::QueryResult;
 use crate::table_row::TableRow;
 use crate::ManipulateTable;
 
