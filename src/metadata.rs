@@ -1,4 +1,1 @@
-use std::collections::HashMap;
-
-pub(crate) struct MetaData {
-}
+pub(crate) struct MetaData {}
