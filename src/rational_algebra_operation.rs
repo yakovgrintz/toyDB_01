@@ -28,8 +28,7 @@ fn evaluate_condition(
     condition: &Condition,
     row: &TableRow,
     index_key: &HashMap<String, usize>,
-) -> bool
-{
+) -> bool {
     match condition {
         Condition::Simple {
             field,
@@ -81,4 +80,77 @@ where
         .map(|&index| column_names[index].clone())
         .collect();
     QueryResult::new(result, result_column_names)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    struct MockTable {
+        columns_name: Vec<String>,
+        data: Vec<TableRow>,
+    }
+
+    impl ManipulateTable for MockTable {
+        fn get_column_names(&self) -> &Vec<String> {
+            &self.columns_name
+        }
+
+        fn get_data(&self) -> &Vec<TableRow> {
+            &self.data
+        }
+    }
+    fn set_up_table() -> MockTable {
+        MockTable {
+            columns_name: vec![
+                "id".to_string(),
+                "name".to_string(),
+                "family_name".to_string(),
+            ],
+            data: vec![
+                TableRow::new(vec![
+                    DbType::Int(1),
+                    DbType::Text("Alice".to_string()),
+                    DbType::Text("Baum".to_string()),
+                ]),
+                TableRow::new(vec![
+                    DbType::Int(2),
+                    DbType::Text("Uncle".to_string()),
+                    DbType::Text("Bob".to_string()),
+                ]),
+            ],
+        }
+    }
+    #[test]
+    fn test_simple_selection_equal() {
+        let table = set_up_table();
+        let condition = Condition::Simple {
+            field: "name".to_string(),
+            operator: Operator::Equals,
+            value: DbType::Text("Alice".to_string()),
+        };
+        let result = selection(&table, &condition);
+        assert_eq!(result.get_data().len(), 1);
+        assert_eq!(
+            result.get_data()[0].get_values(),
+            &vec![
+                DbType::Int(1),
+                DbType::Text("Alice".to_string()),
+                DbType::Text("Baum".to_string())
+            ]
+        );
+    }
+    #[test]
+    fn test_simple_projection() {
+        let table = set_up_table();
+        let columns_to_save = vec!["name".to_string(), "family_name".to_string()];
+        let result = projection(table, columns_to_save);
+        assert_eq!(result.get_column_names().len(), 2);
+        assert_eq!(
+            result.get_data()[0].get_values(),
+            &vec![
+                DbType::Text("Alice".to_string()),
+                DbType::Text("Baum".to_string())
+            ]
+        );
+    }
 }

@@ -3,7 +3,7 @@ use crate::metadata::MetaData;
 use crate::table_row::TableRow;
 use crate::ManipulateTable;
 
-struct Table {
+pub(crate) struct Table {
     meta_data: MetaData,
     data: Vec<TableRow>,
     column_names: Vec<String>,
@@ -20,7 +20,11 @@ impl ManipulateTable for Table {
 }
 
 impl Table {
-    fn new(meta_data: MetaData, column_names: Vec<String>, column_types: Vec<DbType>) -> Table {
+    pub(crate) fn new(
+        meta_data: MetaData,
+        column_names: Vec<String>,
+        column_types: Vec<DbType>,
+    ) -> Table {
         assert_eq!(column_names.len(), column_types.len());
         Table {
             meta_data,
