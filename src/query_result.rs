@@ -15,11 +15,11 @@ impl QueryResult {
 }
 
 impl ManipulateTable for QueryResult {
-    fn get_column_names(&self) -> Vec<String> {
-        self.column_names.clone()
+    fn get_column_names(&self) -> &Vec<String> {
+        &self.column_names
     }
 
-    fn get_data(&self) -> Vec<TableRow> {
-        self.data.clone()
+    fn get_data(&self) -> &Vec<TableRow> {
+        &self.data
     }
 }
