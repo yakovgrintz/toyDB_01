@@ -5,55 +5,64 @@ use crate::table_row::TableRow;
 use crate::ManipulateTable;
 use std::collections::HashMap;
 
-fn selection<T>(table: &T, condition: &Condition) -> QueryResult
+pub(crate) fn selection<T>(table: &T, condition: &Condition) -> QueryResult
 where
     T: ManipulateTable,
 {
     let column_names = table.get_column_names();
-
     let mut index_key: HashMap<String, usize> = column_names
         .iter()
         .enumerate()
         .map(|(index, name)| (name.clone(), index))
         .collect();
+    let evaluator = make__condition_evaluator(condition, &index_key);
+
     let result = table
         .get_data()
         .iter()
-        .filter(|row| evaluate_condition(&condition, row, &index_key))
+        .filter(|row| evaluator(row))
         .cloned()
         .collect();
     QueryResult::new(result, table.get_column_names().clone())
 }
-fn evaluate_condition(
-    condition: &Condition,
-    row: &TableRow,
-    index_key: &HashMap<String, usize>,
-) -> bool {
+
+fn make__condition_evaluator<'a>(
+    condition: &'a Condition,
+    index_key: &'a HashMap<String, usize>,
+) -> Box<dyn Fn(&TableRow) -> bool + 'a> {
     match condition {
         Condition::Simple {
             field,
             operator,
             value,
-        } => match row.get_values().get(*index_key.get(field).unwrap()) {
-            Some(row_value) => match (operator) {
-                (Operator::Equals) => row_value == value,
-                (Operator::LessThan) => row_value < value,
-                (Operator::GreaterThan) => row_value < value,
-                (Operator::NotEquals) => row_value != value,
-                _ => false,
-            },
-            None => false,
-        },
+        } => {
+            let field_index = *index_key.get(field).unwrap();
+            let elevator = move |row: &TableRow| match row.get_values().get(field_index) {
+                Some(row_value) => match (operator) {
+                    Operator::Equals => row_value == value,
+                    Operator::LessThan => row_value < value,
+                    Operator::GreaterThan => row_value < value,
+                    Operator::NotEquals => row_value != value,
+                    _ => false,
+                },
+                None => false,
+            };
+            Box::new(elevator)
+        }
         Condition::And(lhs, rhs) => {
-            evaluate_condition(lhs, row, &index_key) && evaluate_condition(rhs, row, &index_key)
+            let left_operand = make__condition_evaluator(lhs, index_key);
+            let right_operand = make__condition_evaluator(rhs, index_key);
+            Box::new(move |row| left_operand(row) && right_operand(row))
         }
         Condition::Or(lhs, rhs) => {
-            evaluate_condition(lhs, row, &index_key) || evaluate_condition(rhs, row, &index_key)
+            let left_operand = make__condition_evaluator(lhs, index_key);
+            let right_operand = make__condition_evaluator(rhs, index_key);
+            Box::new(move |row| left_operand(row) || right_operand(row))
         }
     }
 }
 
-fn projection<T>(table: T, column: Vec<String>) -> QueryResult
+pub(crate) fn projection<T>(table: T, column: Vec<String>) -> QueryResult
 where
     T: ManipulateTable,
 {
