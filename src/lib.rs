@@ -1,5 +1,6 @@
 use crate::table_row::TableRow;
 
+mod bloom_filter;
 mod condition;
 mod db_type;
 mod metadata;

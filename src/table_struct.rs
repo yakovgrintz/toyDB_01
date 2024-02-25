@@ -4,6 +4,7 @@ use crate::table_row::TableRow;
 use crate::ManipulateTable;
 
 pub(crate) struct Table {
+    name_of_table: String,
     meta_data: MetaData,
     data: Vec<TableRow>,
     column_names: Vec<String>,
@@ -21,12 +22,14 @@ impl ManipulateTable for Table {
 
 impl Table {
     pub(crate) fn new(
+        name_of_table: String,
         meta_data: MetaData,
         column_names: Vec<String>,
         column_types: Vec<DbType>,
     ) -> Table {
         assert_eq!(column_names.len(), column_types.len());
         Table {
+            name_of_table,
             meta_data,
             data: vec![],
             column_names,
@@ -60,7 +63,7 @@ mod tests {
         column_names.push("name".parse().unwrap());
 
         let mut column_types = vec![DbType::Int(0), DbType::Text(String::new())];
-        Table::new(meta_data, column_names, column_types)
+        Table::new("Test".to_string(), meta_data, column_names, column_types)
     }
 
     #[test]

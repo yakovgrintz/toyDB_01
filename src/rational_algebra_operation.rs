@@ -10,12 +10,12 @@ where
     T: ManipulateTable,
 {
     let column_names = table.get_column_names();
-    let mut index_key: HashMap<String, usize> = column_names
+    let index_key: HashMap<String, usize> = column_names
         .iter()
         .enumerate()
         .map(|(index, name)| (name.clone(), index))
         .collect();
-    let evaluator = make__condition_evaluator(condition, &index_key);
+    let evaluator = make_condition_evaluator(condition, &index_key);
 
     let result = table
         .get_data()
@@ -26,7 +26,7 @@ where
     QueryResult::new(result, table.get_column_names().clone())
 }
 
-fn make__condition_evaluator<'a>(
+fn make_condition_evaluator<'a>(
     condition: &'a Condition,
     index_key: &'a HashMap<String, usize>,
 ) -> Box<dyn Fn(&TableRow) -> bool + 'a> {
@@ -38,25 +38,24 @@ fn make__condition_evaluator<'a>(
         } => {
             let field_index = *index_key.get(field).unwrap();
             let elevator = move |row: &TableRow| match row.get_values().get(field_index) {
-                Some(row_value) => match (operator) {
+                Some(row_value) => match operator {
                     Operator::Equals => row_value == value,
                     Operator::LessThan => row_value < value,
                     Operator::GreaterThan => row_value < value,
                     Operator::NotEquals => row_value != value,
-                    _ => false,
                 },
                 None => false,
             };
             Box::new(elevator)
         }
         Condition::And(lhs, rhs) => {
-            let left_operand = make__condition_evaluator(lhs, index_key);
-            let right_operand = make__condition_evaluator(rhs, index_key);
+            let left_operand = make_condition_evaluator(lhs, index_key);
+            let right_operand = make_condition_evaluator(rhs, index_key);
             Box::new(move |row| left_operand(row) && right_operand(row))
         }
         Condition::Or(lhs, rhs) => {
-            let left_operand = make__condition_evaluator(lhs, index_key);
-            let right_operand = make__condition_evaluator(rhs, index_key);
+            let left_operand = make_condition_evaluator(lhs, index_key);
+            let right_operand = make_condition_evaluator(rhs, index_key);
             Box::new(move |row| left_operand(row) || right_operand(row))
         }
     }
@@ -160,6 +159,65 @@ mod test {
                 DbType::Text("Alice".to_string()),
                 DbType::Text("Baum".to_string())
             ]
+        );
+    }
+    #[test]
+    fn test_selection_greater_than() {
+        let table = set_up_table();
+        let condition = Condition::Simple {
+            field: "id".to_string(),
+            operator: Operator::GreaterThan,
+            value: DbType::Int(1),
+        };
+        let result = selection(&table, &condition);
+        assert_eq!(result.get_data().len(), 1);
+        assert_eq!(
+            result.get_data()[0].get_values(),
+            &vec![
+                DbType::Int(2),
+                DbType::Text("Bob".to_string()),
+                DbType::Text("Uncle".to_string())
+            ]
+        );
+    }
+
+    #[test]
+    fn test_selection_and_condition() {
+        let table = set_up_table();
+        let condition = Condition::And(
+            Box::new(Condition::Simple {
+                field: "id".to_string(),
+                operator: Operator::GreaterThan,
+                value: DbType::Int(0),
+            }),
+            Box::new(Condition::Simple {
+                field: "name".to_string(),
+                operator: Operator::Equals,
+                value: DbType::Text("Alice".to_string()),
+            }),
+        );
+        let result = selection(&table, &condition);
+        assert_eq!(result.get_data().len(), 1);
+        assert_eq!(
+            result.get_data()[0].get_values(),
+            &vec![
+                DbType::Int(1),
+                DbType::Text("Alice".to_string()),
+                DbType::Text("Baum".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_projection_nonexistent_column() {
+        let table = set_up_table();
+        let columns_to_project = vec!["name".to_string(), "nonexistent_column".to_string()];
+        let result = projection(table, columns_to_project);
+        assert_eq!(result.get_column_names().len(), 1);
+        assert!(result.get_column_names().contains(&"name".to_string()));
+        assert_eq!(
+            result.get_data()[0].get_values(),
+            &vec![DbType::Text("Alice".to_string()),]
         );
     }
 }
