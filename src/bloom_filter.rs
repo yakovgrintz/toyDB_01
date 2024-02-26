@@ -6,7 +6,7 @@ use std::hash::{Hash, Hasher};
 use std::io::Cursor;
 use std::marker::PhantomData;
 
-struct BloomFilter<T> {
+pub(crate) struct BloomFilter<T> {
     bit_vector: Vec<bool>,
     size: usize,
     num_of_functions: usize,
@@ -14,7 +14,7 @@ struct BloomFilter<T> {
 }
 
 impl<T: Serialize + Hash> BloomFilter<T> {
-    fn new(n: f32, error_percent: f32) -> Self {
+    pub(crate) fn new(n: f32, error_percent: f32) -> Self {
         let ln2 = 2.0_f32.ln();
         let size = -(n * (error_percent.ln())) / (ln2.powf(2.0));
         let num_of_functions = ((size / n) * (ln2)) as usize;
@@ -39,13 +39,13 @@ impl<T: Serialize + Hash> BloomFilter<T> {
         }
         bit_position
     }
-    fn add(&mut self, item: &T) {
+    pub(crate) fn add(&mut self, item: &T) {
         let positions = self.hash(item);
         for pos in positions {
             self.bit_vector[pos] = true;
         }
     }
-    fn check(&self, item: &T) -> bool {
+    pub(crate) fn check(&self, item: &T) -> bool {
         let positions = self.hash(item);
         positions.iter().all(|&pos| self.bit_vector[pos])
     }
@@ -56,6 +56,7 @@ impl<T: Serialize + Hash> BloomFilter<T> {
         hasher.finish() as u32
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
