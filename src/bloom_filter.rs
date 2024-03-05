@@ -1,4 +1,3 @@
-use bincode;
 use murmur3::murmur3_32;
 use serde::Serialize;
 use std::collections::hash_map::DefaultHasher;
@@ -14,14 +13,14 @@ pub(crate) struct BloomFilter<T> {
 }
 
 impl<T: Serialize + Hash> BloomFilter<T> {
-    pub(crate) fn new(n: f32, error_percent: f32) -> Self {
+    pub(crate) fn new(n: usize, error_percent: f32) -> Self {
         let ln2 = 2.0_f32.ln();
-        let size = -(n * (error_percent.ln())) / (ln2.powf(2.0));
-        let num_of_functions = ((size / n) * (ln2)) as usize;
+        let size = (-(n as f32 * (error_percent.ln())) / (ln2.powf(2.0))).ceil() as usize;
+        let num_of_functions = ((size / n) as f32 * (ln2)).ceil() as usize;
 
         BloomFilter {
-            bit_vector: vec![false; size as usize],
-            size: size as usize,
+            bit_vector: vec![false; size],
+            size,
             num_of_functions,
             phantom: PhantomData,
         }
@@ -78,12 +77,12 @@ mod tests {
 
     #[test]
     fn bloom_filter_initialization() {
-        let n = 100_f32; // expected number of items
+        let n = 100; // expected number of items
         let error_percent = 0.01_f32; // desired error rate
         let filter = BloomFilter::<TestItem>::new(n, error_percent);
 
-        let expected_size = (-(n * error_percent.ln()) / (2.0_f32.ln().powi(2))) as usize;
-        let expected_num_of_functions = ((expected_size as f32 / n) * 2.0_f32.ln()) as usize;
+        let expected_size = (-((n as f32) * error_percent.ln()) / (2.0_f32.ln().powi(2))) as usize;
+        let expected_num_of_functions = ((expected_size / n) as f32 * 2.0_f32.ln()) as usize;
 
         assert_eq!(filter.size, expected_size);
         assert_eq!(filter.num_of_functions, expected_num_of_functions);
@@ -92,7 +91,7 @@ mod tests {
 
     #[test]
     fn add_and_check_element() {
-        let mut filter = BloomFilter::<TestItem>::new(100_f32, 0.01_f32);
+        let mut filter = BloomFilter::<TestItem>::new(100, 0.01_f32);
         let item = create_item(1, "test");
 
         filter.add(&item);
@@ -102,7 +101,7 @@ mod tests {
 
     #[test]
     fn check_nonexistent_element() {
-        let filter = BloomFilter::<TestItem>::new(100_f32, 0.01_f32);
+        let filter = BloomFilter::<TestItem>::new(100, 0.01_f32);
         let item = create_item(1, "test");
         let non_existent_item = create_item(2, "nonexistent");
 
@@ -112,7 +111,7 @@ mod tests {
 
     #[test]
     fn false_positive_rate() {
-        let mut filter = BloomFilter::<TestItem>::new(1000_f32, 0.01_f32);
+        let mut filter = BloomFilter::<TestItem>::new(100, 0.01_f32);
         let mut false_positives = 0;
         let mut trials = 10000;
 

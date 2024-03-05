@@ -37,12 +37,12 @@ impl Table {
             column_types,
         }
     }
-    pub(crate) fn set_primary_key(&mut self, column: Vec<String>) {
+    pub(crate) fn set_primary_key(&mut self, column: &[String]) {
         let indices: Vec<usize> = column
             .iter()
             .filter_map(|name| self.column_names.iter().position(|c| c == name))
             .collect();
-        self.meta_data.set_pk(indices);
+        self.meta_data.set_pk(&indices);
     }
     fn insert(&mut self, data: Vec<DbType>) {
         assert_eq!(
@@ -53,8 +53,7 @@ impl Table {
 
         for (data, column_type) in data.iter().zip(self.column_types.iter()) {
             match (data, column_type) {
-                (DbType::Int(_), DbType::Int(_)) => (),
-                (DbType::Text(_), DbType::Text(_)) => (),
+                (DbType::Int(_), DbType::Int(_)) | (DbType::Text(_), DbType::Text(_)) => (),
                 (_, _) => panic!("type mismatch"),
             }
         }
@@ -68,11 +67,11 @@ impl Table {
         }
 
         let filter = self.meta_data.get_filter();
-        if !filter.check(&result) {
+        if filter.check(&result) {
+            panic!("Inserting a value that already exists (with high probability) into the primary key column. Please enter another value");
+        } else {
             self.data.push(TableRow::new(data));
             filter.add(&result);
-        } else {
-            panic!("Inserting a value that already exists (with high probability) into the primary key column. Please enter another value");
         }
     }
 }
@@ -119,7 +118,7 @@ mod tests {
     #[should_panic(expected = "Inserting a value that already exists")]
     fn test_insert_duplicate_primary_key() {
         let mut table = set_up_table();
-        table.set_primary_key(vec!["id".to_string()]);
+        table.set_primary_key(&vec!["id".to_string()]);
         table.insert(vec![DbType::Int(1), DbType::Text("Alice".to_string())]);
         // This should panic because it attempts to insert a duplicate primary key.
         table.insert(vec![DbType::Int(1), DbType::Text("Bob".to_string())]);

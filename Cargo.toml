@@ -1,5 +1,5 @@
 [package]
-name = "toyDB_01"
+name = "toy_db_01"
 version = "0.1.0"
 edition = "2021"
 
