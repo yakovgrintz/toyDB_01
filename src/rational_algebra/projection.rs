@@ -2,22 +2,20 @@ use crate::db_type::DbType;
 use crate::query_result::QueryResult;
 use crate::table_row::TableRow;
 use crate::ManipulateTable;
+use crate::rational_algebra::helper_functions::find_indexes;
 
-pub(crate) fn projection<T>(table: &T, column: &[String]) -> QueryResult
+pub(crate) fn projection<T>(table: &T, columns: &[String]) -> QueryResult
 where
     T: ManipulateTable,
 {
-    assert!(table.get_column_names().len() >= column.len());
+    assert!(table.get_column_names().len() >= columns.len());
     let column_names: &Vec<String> = table.get_column_names();
-    let indices: Vec<usize> = column
-        .iter()
-        .filter_map(|name| column_names.iter().position(|c| c == name))
-        .collect();
+    let indexes = find_indexes(table,columns);
     let result: Vec<TableRow> = table
         .get_data()
         .iter()
         .map(|row| {
-            let projected_row: Vec<DbType> = indices
+            let projected_row: Vec<DbType> = indexes
                 .iter()
                 .filter_map(|&index| row.get_values().get(index))
                 .cloned()
@@ -25,7 +23,7 @@ where
             TableRow::new(projected_row)
         })
         .collect();
-    let result_column_names: Vec<String> = indices
+    let result_column_names: Vec<String> = indexes
         .iter()
         .map(|&index| column_names[index].clone())
         .collect();

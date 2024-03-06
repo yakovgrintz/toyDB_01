@@ -8,19 +8,14 @@ fn inner_join<T>(table1: &T, table2: &T, by: &str) -> Result<QueryResult, JoinEr
 where
     T: ManipulateTable,
 {
-    let index_1 = table1.get_column_names().iter().position(|name| name == by);
-    let index_2 = table2.get_column_names().iter().position(|name| name == by);
-    if index_1.is_none() || index_2.is_none() {
-        return Err(JoinError {
-            message: format!("Column '{}' not found in one of the tables", by),
-        });
-    }
-    let index_1 = index_1.unwrap();
-    let index_2 = index_2.unwrap();
-    let data_1 = table1.get_data();
-    let data_2 = table2.get_data();
+    let (index_1, index_2) = find_indexes(table1, table2, by)?;
+    let (data_1,data_2) = (table1.get_data(),table2.get_data());
+    let result = perform_inner_join(data_1,data_2,index_1,index_2);
+    let column_names_result=find_column_names (table1, table2, index_2);
+    Ok(QueryResult::new(result, column_names_result))
+}
+fn perform_inner_join(data_1:&Vec<TableRow>,data_2:&Vec<TableRow>,index_1:usize,index_2:usize)->Vec<TableRow>{
     let mut result: Vec<TableRow> = Vec::new();
-    let mut column_names_result: Vec<String> = Vec::new();
     for row1 in data_1 {
         for row2 in data_2 {
             if let Some(value1) = row1.get_values().get(index_1) {
@@ -32,14 +27,39 @@ where
             }
         }
     }
+    result
+}
+fn find_indexes<T>(table1: &T, table2: &T, by: &str) -> Result<(usize, usize), JoinError>
+where
+    T: ManipulateTable,
+{
+    let index_1 = table1.get_column_names().iter().position(|name| name == by);
+    let index_2 = table2.get_column_names().iter().position(|name| name == by);
+    if index_1.is_none() || index_2.is_none() {
+        return Err(JoinError {
+            message: format!("Column '{}' not found in one of the tables", by),
+        });
+    }
+    let index_1 = index_1.unwrap();
+    let index_2 = index_2.unwrap();
+    return Ok((index_1, index_2));
+}
+
+#[inline]
+fn find_column_names<T>( table1: &T, table2: &T, index_2: usize)->Vec<String>
+where
+    T: ManipulateTable,
+{
+    let mut column_names_result: Vec<String> = Vec::new();
     column_names_result.extend_from_slice(table1.get_column_names());
     for (index, value) in table2.get_column_names().iter().enumerate() {
         if index != index_2 {
             column_names_result.push(value.clone());
         }
     }
-    Ok(QueryResult::new(result, column_names_result))
+    column_names_result
 }
+
 fn create_row(row1: &TableRow, row2: &TableRow, index2: usize) -> TableRow {
     let mut values = Vec::new();
     values.extend_from_slice(row1.get_values());
@@ -50,6 +70,7 @@ fn create_row(row1: &TableRow, row2: &TableRow, index2: usize) -> TableRow {
     }
     TableRow::new(values)
 }
+
 #[derive(Debug)]
 struct JoinError {
     message: String,
@@ -65,8 +86,8 @@ impl fmt::Display for JoinError {
 
 #[cfg(test)]
 mod tests {
-    use crate::db_type::DbType;
     use super::*;
+    use crate::db_type::DbType;
     struct MockTable {
         column_names: Vec<String>,
         data: Vec<TableRow>,
