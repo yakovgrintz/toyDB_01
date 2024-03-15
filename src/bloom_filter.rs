@@ -1,8 +1,7 @@
-use murmur3::murmur3_32;
+use crate::helper_function::murmur3_32::murmur_hash3_32;
 use serde::Serialize;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
-use std::io::Cursor;
 use std::marker::PhantomData;
 
 pub(crate) struct BloomFilter<T> {
@@ -28,9 +27,8 @@ impl<T: Serialize + Hash> BloomFilter<T> {
     fn hash(&self, item: &T) -> Vec<usize> {
         let mut bit_position = Vec::new();
         let bit_stream = bincode::serialize(item).unwrap();
-        let mut buffer = Cursor::new(&bit_stream);
         for i in 0..self.num_of_functions {
-            let hash1 = murmur3_32(&mut buffer, 0).unwrap() as usize;
+            let hash1 = murmur_hash3_32(&bit_stream, 0) as usize;
             let hash2 = Self::fnv1a_32(item) as usize;
             let result = (hash1.wrapping_add(i * hash2)) % self.size;
 

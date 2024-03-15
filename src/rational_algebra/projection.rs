@@ -1,8 +1,8 @@
 use crate::db_type::DbType;
 use crate::query_result::QueryResult;
+use crate::rational_algebra::helper_functions::find_indexes;
 use crate::table_row::TableRow;
 use crate::ManipulateTable;
-use crate::rational_algebra::helper_functions::find_indexes;
 
 pub(crate) fn projection<T>(table: &T, columns: &[String]) -> QueryResult
 where
@@ -10,7 +10,7 @@ where
 {
     assert!(table.get_column_names().len() >= columns.len());
     let column_names: &Vec<String> = table.get_column_names();
-    let indexes = find_indexes(table,columns);
+    let indexes = find_indexes(table, columns);
     let result: Vec<TableRow> = table
         .get_data()
         .iter()

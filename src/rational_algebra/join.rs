@@ -9,12 +9,17 @@ where
     T: ManipulateTable,
 {
     let (index_1, index_2) = find_indexes(table1, table2, by)?;
-    let (data_1,data_2) = (table1.get_data(),table2.get_data());
-    let result = perform_inner_join(data_1,data_2,index_1,index_2);
-    let column_names_result=find_column_names (table1, table2, index_2);
+    let (data_1, data_2) = (table1.get_data(), table2.get_data());
+    let result = perform_inner_join(data_1, data_2, index_1, index_2);
+    let column_names_result = find_column_names(table1, table2, index_2);
     Ok(QueryResult::new(result, column_names_result))
 }
-fn perform_inner_join(data_1:&Vec<TableRow>,data_2:&Vec<TableRow>,index_1:usize,index_2:usize)->Vec<TableRow>{
+fn perform_inner_join(
+    data_1: &Vec<TableRow>,
+    data_2: &Vec<TableRow>,
+    index_1: usize,
+    index_2: usize,
+) -> Vec<TableRow> {
     let mut result: Vec<TableRow> = Vec::new();
     for row1 in data_1 {
         for row2 in data_2 {
@@ -46,7 +51,7 @@ where
 }
 
 #[inline]
-fn find_column_names<T>( table1: &T, table2: &T, index_2: usize)->Vec<String>
+fn find_column_names<T>(table1: &T, table2: &T, index_2: usize) -> Vec<String>
 where
     T: ManipulateTable,
 {

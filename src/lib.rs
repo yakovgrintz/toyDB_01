@@ -6,6 +6,7 @@ use crate::table_row::TableRow;
 mod bloom_filter;
 mod condition;
 mod db_type;
+mod helper_function;
 mod metadata;
 mod query_result;
 mod rational_algebra;
